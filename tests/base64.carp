@@ -1,0 +1,18 @@
+(load "base64.carp")
+(load "Test.carp")
+(use-all Base64 Test)
+
+(defn main []
+  (with-test test
+    (assert-equal test
+      "SGVsbG8h"
+      &(encode "Hello!")
+      "test that encoding works"
+    )
+    (assert-equal test
+      "Hello"
+      &(decode "SGVsbG8=")
+      "test that decoding works"
+    )
+    (print-test-results test))
+)
