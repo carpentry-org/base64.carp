@@ -1,0 +1,76 @@
+(use-all Array Char Int String)
+
+(defmodule Base64
+
+  (def values [\A \B \C \D \E \F \G \H \I \J \K \L \M \N \O \P \Q \R \S \T \U \V \W \X \Y \Z \a \b \c \d \e \f \g \h \i \j \k \l \m \n \o \p \q \r \s \t \u \v \w \x \y \z \0 \1 \2 \3 \4 \5 \6 \7 \8 \9 \+ \/ \=])
+  (hidden values)
+
+  (hidden from-int-ref)
+  (defn from-int-ref [x] (from-int @x))
+
+  (doc decode "decodes a base64-encoded string.")
+  (defn decode [str]
+      (let-do [bytes (chars str)
+            decoded []]
+        (while (/= (count &bytes) 0)
+          (let-do [b0 (index-of &values @(nth &bytes 0))
+                   b1 (index-of &values @(nth &bytes 1))
+                   b2 (index-of &values @(nth &bytes 2))
+                   b3 (index-of &values @(nth &bytes 3))]
+            (set! bytes (suffix-array &bytes 4))
+            (set! decoded (Array.push-back decoded (bit-or (bit-shift-left b0 2) (bit-shift-right b1 4))))
+            (when (< b2 64)
+              (set! decoded (Array.push-back decoded (bit-or (bit-shift-left b1 4) (bit-shift-right b2 2)))))
+            (when (< b3 64)
+              (set! decoded (Array.push-back decoded (bit-or (bit-shift-left b2 6) b3))))))
+        (let [ndecoded (copy-map from-int-ref &decoded)]
+          (from-chars &ndecoded))))
+
+  (hidden neg)
+  (defn neg [a]
+    (- a (* a 2)))
+
+  (hidden get-mask)
+  (defn get-mask [pattern]
+    (let [real-pat (+ -8 pattern)]
+      (cond
+        (> real-pat 0) (bit-shift-left 255 real-pat)
+        (< real-pat 0) (bit-shift-right 255 (neg real-pat))
+        0)))
+
+  (hidden get-padding)
+  (defn get-padding [pattern]
+    (case pattern
+      6 @"="
+      4 @"=="
+      @""))
+
+  (hidden bit-shifter)
+  (defn bit-shifter [n trail]
+    (case trail
+      2 (bit-shift-left n 4)
+      4 (bit-shift-left n 2)
+      n))
+
+  (doc encode "encodes a string into base64.")
+  (defn encode [s]
+    (let-do [bytes (chars s)
+             trail 2
+             before 0
+             enc @""]
+      (while (> (count &bytes) 0)
+          (if (= trail 8)
+            (do
+              (set! enc (append enc (prn @(nth &values before))))
+              (set! trail 2)
+              (set! before 0))
+            (let [h (to-int @(nth &bytes 0))
+                  shifted (bit-shift-right h trail)
+                  n (+ shifted before)]
+              (do
+                (set! before (bit-shifter (bit-and h (get-mask trail)) trail))
+                (set! bytes (suffix-array &bytes 1))
+                (set! trail (+ trail 2))
+                (set! enc (append enc (prn @(nth &values n))))))))
+      (string-join enc (prn @(nth &values before)) (get-padding trail))))
+)
