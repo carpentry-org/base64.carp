@@ -2,21 +2,26 @@
 
 (defmodule Base64
 
-  (def values [\A \B \C \D \E \F \G \H \I \J \K \L \M \N \O \P \Q \R \S \T \U \V \W \X \Y \Z \a \b \c \d \e \f \g \h \i \j \k \l \m \n \o \p \q \r \s \t \u \v \w \x \y \z \0 \1 \2 \3 \4 \5 \6 \7 \8 \9 \+ \/ \=])
-  (hidden values)
+  (doc mime-charset "The Base64 character set as specified by MIME.")
+  (def mime-charset [
+    \A \B \C \D \E \F \G \H \I \J \K \L \M \N \O \P \Q
+    \R \S \T \U \V \W \X \Y \Z \a \b \c \d \e \f \g \h
+    \i \j \k \l \m \n \o \p \q \r \s \t \u \v \w \x \y
+    \z \0 \1 \2 \3 \4 \5 \6 \7 \8 \9 \+ \/ \=
+  ])
 
   (hidden from-int-ref)
   (defn from-int-ref [x] (from-int @x))
 
-  (doc decode "decodes a base64-encoded string.")
-  (defn decode [str]
+  (doc decode-using "Decodes a base64-encoded string using a user-supplied character set.")
+  (defn decode-using [charset str]
       (let-do [bytes (chars str)
             decoded []]
-        (while (/= (count &bytes) 0)
-          (let-do [b0 (index-of &values @(nth &bytes 0))
-                   b1 (index-of &values @(nth &bytes 1))
-                   b2 (index-of &values @(nth &bytes 2))
-                   b3 (index-of &values @(nth &bytes 3))]
+        (while (/= (length &bytes) 0)
+          (let-do [b0 (index-of charset @(nth &bytes 0))
+                   b1 (index-of charset @(nth &bytes 1))
+                   b2 (index-of charset @(nth &bytes 2))
+                   b3 (index-of charset @(nth &bytes 3))]
             (set! bytes (suffix-array &bytes 4))
             (set! decoded (Array.push-back decoded (bit-or (bit-shift-left b0 2) (bit-shift-right b1 4))))
             (when (< b2 64)
@@ -26,9 +31,9 @@
         (let [ndecoded (copy-map from-int-ref &decoded)]
           (from-chars &ndecoded))))
 
-  (hidden neg)
-  (defn neg [a]
-    (- a (* a 2)))
+  (doc decode "Decodes a base64-encoded string using mime-charset.")
+  (defn decode [str]
+    (decode-using &mime-charset str))
 
   (hidden get-mask)
   (defn get-mask [pattern]
@@ -52,16 +57,16 @@
       4 (bit-shift-left n 2)
       n))
 
-  (doc encode "encodes a string into base64.")
-  (defn encode [s]
+  (doc encode-using "Encodes a string into base64 using a user-supplied character set.")
+  (defn encode-using [charset s]
     (let-do [bytes (chars s)
              trail 2
              before 0
              enc @""]
-      (while (> (count &bytes) 0)
+      (while (> (length &bytes) 0)
           (if (= trail 8)
             (do
-              (set! enc (append enc (prn @(nth &values before))))
+              (set! enc (append &enc &(str @(nth charset before))))
               (set! trail 2)
               (set! before 0))
             (let [h (to-int @(nth &bytes 0))
@@ -71,6 +76,10 @@
                 (set! before (bit-shifter (bit-and h (get-mask trail)) trail))
                 (set! bytes (suffix-array &bytes 1))
                 (set! trail (+ trail 2))
-                (set! enc (append enc (prn @(nth &values n))))))))
-      (string-join enc (prn @(nth &values before)) (get-padding trail))))
+                (set! enc (append &enc &(str @(nth charset n))))))))
+      (string-join enc (str @(nth charset before)) (get-padding trail))))
+
+  (doc encode "Encodes a string into base64 using mime-charset.")
+  (defn encode [s]
+    (encode-using &mime-charset s))
 )
