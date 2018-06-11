@@ -14,6 +14,7 @@
   (defn from-int-ref [x] (from-int @x))
 
   (doc decode-using "Decodes a base64-encoded string using a user-supplied character set.")
+  (sig decode-using (λ [&(Array Char) &String] String))
   (defn decode-using [charset str]
       (let-do [bytes (chars str)
             decoded []]
@@ -58,6 +59,7 @@
       n))
 
   (doc encode-using "Encodes a string into base64 using a user-supplied character set.")
+  (sig encode-using (λ [&(Array Char), &String] String))
   (defn encode-using [charset s]
     (let-do [bytes (chars s)
              trail 2
