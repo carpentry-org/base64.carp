@@ -5,14 +5,24 @@
 (defn main []
   (with-test test
     (assert-equal test
+      "AgME"
+      &(encode &[2 3 4])
+      "test that encoding data works"
+    )
+    (assert-equal test
       "SGVsbG8h"
-      &(encode "Hello!")
-      "test that encoding works"
+      &(encode-str "Hello!")
+      "test that encoding strings works"
+    )
+    (assert-equal test
+      &[2 3 4]
+      &(decode "AgME")
+      "test that decoding data works"
     )
     (assert-equal test
       "Hello"
-      &(decode "SGVsbG8=")
-      "test that decoding works"
+      &(decode-str "SGVsbG8=")
+      "test that decoding strings works"
     )
     (print-test-results test))
 )
