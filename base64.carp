@@ -16,9 +16,6 @@
   (hidden to-int-ref)
   (defn to-int-ref [x] (to-int @x))
 
-  (defn mod-right [t]
-    (mod t 256))
-
   (doc decode-using "Decodes a base64-encoded datum using a user-supplied character set.")
   (sig decode-using (λ [&(Array Char) &String] (Array Int)))
   (defn decode-using [charset str]
@@ -63,7 +60,7 @@
         (case (- l idx)
           1
             (let-do [c0 (nth charset (bit-shift-right b0 2))
-                     c1 (nth charset (bit-and b0 3))]
+                     c1 (nth charset (bit-shift-left (bit-and b0 3) 4))]
               (set! enc (str* enc @c0 @c1 (mk-padding charset 2)))
               (set! idx l))
           2
@@ -71,7 +68,7 @@
                      c0 (nth charset (bit-shift-right b0 2))
                      c1 (nth charset (bit-or (bit-shift-left (bit-and b0 3) 4)
                                              (bit-shift-right b1 4)))
-                     c2 (nth charset (bit-and b1 15))
+                     c2 (nth charset (bit-shift-left (bit-and b1 15) 2))
                      ]
               (set! enc (str* enc @c0 @c1 @c2 (mk-padding charset 1)))
               (set! idx l))
