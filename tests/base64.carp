@@ -25,9 +25,14 @@
       "test that decoding strings works"
     )
     (assert-equal test
-                  "aMO2eQ=="
-                  &(encode-str "höy")
-                  "encoding UTF8 strings works"
+      "aMO2eQ=="
+      &(encode-str "höy")
+      "test that encoding UTF8 strings works"
+    )
+    (assert-equal test
+      "höy"
+      &(decode-str "aMO2eQ==")
+      "test that decoding UTF8 strings works"
     )
     (print-test-results test))
 )

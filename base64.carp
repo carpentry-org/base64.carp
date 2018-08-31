@@ -61,7 +61,7 @@
             (let-do [c0 (nth charset (bit-shift-right b0 2))
                      c1 (nth charset (bit-shift-left (bit-and b0 3) 4))]
               (set! enc (str* enc @c0 @c1 pad pad))
-              (set! idx l))
+              (break))
           2
             (let-do [b1 @(nth s (inc idx))
                      c0 (nth charset (bit-shift-right b0 2))
@@ -70,7 +70,7 @@
                      c2 (nth charset (bit-shift-left (bit-and b1 15) 2))
                      ]
               (set! enc (str* enc @c0 @c1 @c2 pad))
-              (set! idx l))
+              (break))
           (let-do [b1 @(nth s (inc idx))
                    b2 @(nth s (+ idx 2))
                    c0 (nth charset (bit-shift-right b0 2))
