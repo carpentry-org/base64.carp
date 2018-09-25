@@ -34,5 +34,5 @@
       &(decode-str "aMO2eQ==")
       "test that decoding UTF8 strings works"
     )
-    (print-test-results test))
+  )
 )

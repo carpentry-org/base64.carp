@@ -13,12 +13,6 @@
   (doc mime-padding "The Base64 padding as specified by MIME.")
   (def mime-padding \=)
 
-  (hidden from-int-ref)
-  (defn from-int-ref [x] (from-int @x))
-
-  (hidden to-int-ref)
-  (defn to-int-ref [x] (to-int @x))
-
   (doc decode-using "Decodes a base64-encoded datum using a user-supplied character set.")
   (sig decode-using (λ [&(Array Char) Char &String] (Array Int)))
   (defn decode-using [charset padding str]
@@ -45,7 +39,7 @@
 
   (doc decode-str "Decodes a base64-encoded string using mime-charset.")
   (defn decode-str [str]
-    (from-chars &(copy-map from-int-ref
+    (from-chars &(copy-map (fn [x] (from-int @x))
                            &(decode-using &mime-charset mime-padding str))))
 
   (doc encode-using "Encodes a base64-encoded datum using a user-supplied character set.")
@@ -90,5 +84,6 @@
 
   (doc encode-str "Encodes a string into base64 using mime-charset.")
   (defn encode-str [s]
-    (encode-using &mime-charset mime-padding &(copy-map to-int-ref &(chars s))))
+    (encode-using &mime-charset mime-padding &(copy-map (fn [x] (to-int @x))
+                                                        &(chars s))))
 )
