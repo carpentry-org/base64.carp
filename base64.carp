@@ -25,7 +25,7 @@
                    b2 (Maybe.from (Array.index-of charset third) 0)
                    fourth (unsafe-nth &bytes 3)
                    b3 (Maybe.from (Array.index-of charset fourth) 0)]
-            (set! bytes (suffix-array &bytes 4))
+            (set! bytes (suffix &bytes 4))
             (set! decoded (Array.push-back decoded (bit-or (bit-shift-left (bit-and b0 63) 2) (bit-shift-right b1 4))))
             (when (/= third padding)
               (set! decoded (Array.push-back decoded (bit-or (bit-shift-left (bit-and b1 15) 4) (bit-shift-right b2 2)))))
