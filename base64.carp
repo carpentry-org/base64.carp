@@ -1,80 +1,84 @@
-(use-all Array Char Int String)
 
 (defmodule Base64
 
   (doc mime-charset "The Base64 character set as specified by MIME.")
-  (def mime-charset [
-    \A \B \C \D \E \F \G \H \I \J \K \L \M \N \O \P \Q
-    \R \S \T \U \V \W \X \Y \Z \a \b \c \d \e \f \g \h
-    \i \j \k \l \m \n \o \p \q \r \s \t \u \v \w \x \y
-    \z \0 \1 \2 \3 \4 \5 \6 \7 \8 \9 \+ \/
-  ])
+  (def mime-charset (to-bytes "ABCDEFGHIJKLMNOPQRSTZVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+  ))
 
   (doc mime-padding "The Base64 padding as specified by MIME.")
-  (def mime-padding \=)
+  (def mime-padding 61b) ; => \= as byte
+
+  (private get-from-charset)
+  (hidden get-from-charset)
+  (defn get-from-charset [charset byte]
+    (Byte.from-int (Maybe.from (Array.index-of charset byte) 0)))
 
   (doc decode-using "Decodes a base64-encoded datum using a user-supplied character set.")
-  (sig decode-using (λ [&(Array Char) &Char &String] (Array Int)))
-  (defn decode-using [charset padding str]
-      (let-do [bytes (chars str)
-            decoded []]
-        (while (/= (length &bytes) 0)
-          (let-do [b0 (Maybe.from (Array.index-of charset (unsafe-nth &bytes 0)) 0)
-                   b1 (Maybe.from (Array.index-of charset (unsafe-nth &bytes 1)) 0)
-                   third (unsafe-nth &bytes 2)
-                   b2 (Maybe.from (Array.index-of charset third) 0)
-                   fourth (unsafe-nth &bytes 3)
-                   b3 (Maybe.from (Array.index-of charset fourth) 0)]
-            (set! bytes (suffix &bytes 4))
-            (set! decoded (Array.push-back decoded (bit-or (bit-shift-left (bit-and b0 63) 2) (bit-shift-right b1 4))))
+  (sig decode-using (λ [&(Array Byte) &Byte &String] (Array Byte)))
+  (defn decode-using [charset padding s]
+      (let-do [bytes (to-bytes s)
+               decoded []]
+        (while (> (Array.length &bytes) 3)
+          (let-do [b0 (get-from-charset charset (Array.unsafe-nth &bytes 0))
+                   b1 (get-from-charset charset (Array.unsafe-nth &bytes 1))
+                   third (Array.unsafe-nth &bytes 2)
+                   b2 (get-from-charset charset third)
+                   fourth (Array.unsafe-nth &bytes 3)
+                   b3 (get-from-charset charset fourth)]
+            (set! bytes (Array.suffix &bytes 4))
+            (set! decoded (Array.push-back decoded (bit-or (bit-shift-left (bit-and b0 63b) 2b) (bit-shift-right b1 4b))))
             (when (/= third padding)
-              (set! decoded (Array.push-back decoded (bit-or (bit-shift-left (bit-and b1 15) 4) (bit-shift-right b2 2)))))
+              (set! decoded (Array.push-back decoded (bit-or (bit-shift-left (bit-and b1 15b) 4b) (bit-shift-right b2 2b)))))
             (when (/= fourth padding)
-              (set! decoded (Array.push-back decoded (bit-or (bit-shift-left (bit-and b2 3) 6) b3))))))
+              (set! decoded (Array.push-back decoded (bit-or (bit-shift-left (bit-and b2 3b) 6b) b3))))))
         decoded))
 
   (doc decode "Decodes a base64-encoded datum using mime-charset.")
-  (defn decode [str]
-    (decode-using &mime-charset &mime-padding str))
+  (defn decode [x]
+    (decode-using &mime-charset &mime-padding x))
 
   (doc decode-str "Decodes a base64-encoded string using mime-charset.")
-  (defn decode-str [str]
-    (from-chars &(copy-map &(fn [x] (from-int @x))
-                           &(decode-using &mime-charset &mime-padding str))))
+  (defn decode-str [s]
+    (from-bytes &(decode-using &mime-charset &mime-padding s)))
+
+  (private char-from-byte)
+  (hidden char-from-byte)
+  (defn char-from-byte [b]
+    (Char.from-int (to-int b)))
 
   (doc encode-using "Encodes a base64-encoded datum using a user-supplied character set.")
-  (sig encode-using (λ [&(Array Char) Char &(Array Int)] String))
+  (sig encode-using (λ [&(Array Byte) Byte &(Array Byte)] String))
   (defn encode-using [charset pad s]
     (let-do [l (Array.length s)
              idx 0
              enc @""]
       (while (> l idx)
-        (let-do [b0 @(unsafe-nth s idx)]
+        (let-do [b0 @(Array.unsafe-nth s idx)]
         (case (- l idx)
           1
-            (let-do [c0 (unsafe-nth charset (bit-shift-right b0 2))
-                     c1 (unsafe-nth charset (bit-shift-left (bit-and b0 3) 4))]
-              (set! enc (str* enc @c0 @c1 pad pad))
+            (let-do [c0 (Array.unsafe-nth charset (to-int (bit-shift-right b0 2b)))
+                     c1 (Array.unsafe-nth charset (to-int (bit-shift-left (bit-and b0 3b) 4b)))]
+              (set! enc (str* enc (char-from-byte @c0) (char-from-byte @c1) (char-from-byte pad) (char-from-byte pad)))
               (break))
           2
-            (let-do [b1 @(unsafe-nth s (inc idx))
-                     c0 (unsafe-nth charset (bit-shift-right b0 2))
-                     c1 (unsafe-nth charset (bit-or (bit-shift-left (bit-and b0 3) 4)
-                                             (bit-shift-right b1 4)))
-                     c2 (unsafe-nth charset (bit-shift-left (bit-and b1 15) 2))
+            (let-do [b1 @(Array.unsafe-nth s (inc idx))
+                     c0 (Array.unsafe-nth charset (to-int (bit-shift-right b0 2b)))
+                     c1 (Array.unsafe-nth charset (to-int (bit-or (bit-shift-left (bit-and b0 3b) 4b)
+                                             (bit-shift-right b1 4b))))
+                     c2 (Array.unsafe-nth charset (to-int (bit-shift-left (bit-and b1 15b) 2b)))
                      ]
-              (set! enc (str* enc @c0 @c1 @c2 pad))
+              (set! enc (str* enc (char-from-byte @c0) (char-from-byte @c1) (char-from-byte @c2) (char-from-byte pad)))
               (break))
-          (let-do [b1 @(unsafe-nth s (inc idx))
-                   b2 @(unsafe-nth s (+ idx 2))
-                   c0 (unsafe-nth charset (bit-shift-right b0 2))
-                   c1 (unsafe-nth charset (bit-or (bit-shift-left (bit-and b0 3) 4)
-                                           (bit-shift-right b1 4)))
-                   c2 (unsafe-nth charset (bit-or (bit-shift-left (bit-and b1 15) 2)
-                                           (bit-shift-right b2 6)))
-                   c3 (unsafe-nth charset (bit-and b2 63))
+          (let-do [b1 @(Array.unsafe-nth s (inc idx))
+                   b2 @(Array.unsafe-nth s (+ idx 2))
+                   c0 (Array.unsafe-nth charset (to-int (bit-shift-right b0 2b)))
+                   c1 (Array.unsafe-nth charset (to-int (bit-or (bit-shift-left (bit-and b0 3b) 4b)
+                                           (bit-shift-right b1 4b))))
+                   c2 (Array.unsafe-nth charset (to-int (bit-or (bit-shift-left (bit-and b1 15b) 2b)
+                                           (bit-shift-right b2 6b))))
+                   c3 (Array.unsafe-nth charset (to-int (bit-and b2 63b)))
                    ]
-            (set! enc (str* enc @c0 @c1 @c2 @c3))
+            (set! enc (str* enc (char-from-byte @c0) (char-from-byte @c1) (char-from-byte @c2) (char-from-byte @c3)))
             (set! idx (+ idx 3))))))
         enc))
 
@@ -84,6 +88,5 @@
 
   (doc encode-str "Encodes a string into base64 using mime-charset.")
   (defn encode-str [s]
-    (encode-using &mime-charset mime-padding &(copy-map &(fn [x] (to-int @x))
-                                                        &(chars s))))
+    (encode-using &mime-charset mime-padding &(to-bytes s)))
 )

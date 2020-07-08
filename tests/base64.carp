@@ -6,7 +6,7 @@
   (with-test test
     (assert-equal test
       "AgME"
-      &(encode &[2 3 4])
+      &(encode &[2b 3b 4b])
       "test that encoding data works"
     )
     (assert-equal test
@@ -15,7 +15,7 @@
       "test that encoding strings works"
     )
     (assert-equal test
-      &[2 3 4]
+      &[2b 3b 4b]
       &(decode "AgME")
       "test that decoding data works"
     )
