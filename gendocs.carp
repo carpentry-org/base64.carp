@@ -1,9 +1,10 @@
 (load "base64.carp")
 
-(defdynamic gendocs []
-       (do
-         (Project.config "title" "Base64")
-         (save-docs Base64)))
+(Project.config "title" "Base64")
+(Project.config "docs-directory" "./docs/")
+(Project.config "docs-logo" "")
+(Project.config "docs-styling" "/style.css")
+(Project.config "docs-generate-index" false)
+(save-docs Base64)
 
-(gendocs)
 (quit)
