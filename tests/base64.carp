@@ -7,32 +7,24 @@
     (assert-equal test
       "AgME"
       &(encode &[2b 3b 4b])
-      "test that encoding data works"
-    )
+      "test that encoding data works")
     (assert-equal test
       "SGVsbG8h"
       &(encode-str "Hello!")
-      "test that encoding strings works"
-    )
+      "test that encoding strings works")
     (assert-equal test
       &[2b 3b 4b]
       &(decode "AgME")
-      "test that decoding data works"
-    )
+      "test that decoding data works")
     (assert-equal test
       "Hello"
       &(decode-str "SGVsbG8=")
-      "test that decoding strings works"
-    )
+      "test that decoding strings works")
     (assert-equal test
       "aMO2eQ=="
       &(encode-str "höy")
-      "test that encoding UTF8 strings works"
-    )
+      "test that encoding UTF8 strings works")
     (assert-equal test
       "höy"
       &(decode-str "aMO2eQ==")
-      "test that decoding UTF8 strings works"
-    )
-  )
-)
+      "test that decoding UTF8 strings works")))
