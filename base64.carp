@@ -1,7 +1,7 @@
 (defmodule Base64
   (doc mime-charset "The Base64 character set as specified by MIME.")
   (def mime-charset
-    (to-bytes "ABCDEFGHIJKLMNOPQRSTZVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"))
+    (to-bytes "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"))
 
   (doc mime-padding "The Base64 padding as specified by MIME.")
   (def mime-padding 61b)

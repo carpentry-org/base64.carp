@@ -27,4 +27,24 @@
     (assert-equal test
       "höy"
       &(decode-str "aMO2eQ==")
-      "test that decoding UTF8 strings works")))
+      "test that decoding UTF8 strings works")
+    (assert-equal test
+      "UA=="
+      &(encode-str "P")
+      "test that index 20 (U) encodes correctly")
+    (assert-equal test
+      "P"
+      &(decode-str "UA==")
+      "test that index 20 (U) decodes correctly")
+    (assert-equal test
+      &[2b 3b 4b]
+      &(decode &(encode &[2b 3b 4b]))
+      "roundtrip: short binary data")
+    (assert-equal test
+      "Hello!"
+      &(decode-str &(encode-str "Hello!"))
+      "roundtrip: ASCII string")
+    (assert-equal test
+      "höy"
+      &(decode-str &(encode-str "höy"))
+      "roundtrip: UTF8 string")))
