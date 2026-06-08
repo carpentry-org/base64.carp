@@ -4,6 +4,7 @@
 
 (defn main []
   (with-test test
+    ; encoding tests
     (assert-equal test
       "AgME"
       &(encode &[2b 3b 4b])
@@ -13,38 +14,133 @@
       &(encode-str "Hello!")
       "test that encoding strings works")
     (assert-equal test
-      &[2b 3b 4b]
-      &(decode "AgME")
-      "test that decoding data works")
-    (assert-equal test
-      "Hello"
-      &(decode-str "SGVsbG8=")
-      "test that decoding strings works")
-    (assert-equal test
       "aMO2eQ=="
       &(encode-str "höy")
       "test that encoding UTF8 strings works")
     (assert-equal test
-      "höy"
-      &(decode-str "aMO2eQ==")
-      "test that decoding UTF8 strings works")
-    (assert-equal test
       "UA=="
       &(encode-str "P")
       "test that index 20 (U) encodes correctly")
+    (assert-equal test "" &(encode &[]) "encode empty input")
+    (assert-equal test "AA==" &(encode &[0b]) "encode single zero byte")
+    (assert-equal test "AAA=" &(encode &[0b 0b]) "encode two zero bytes")
     (assert-equal test
-      "P"
+      "AAAA"
+      &(encode &[0b 0b 0b])
+      "encode three zero bytes (no padding)")
+    (assert-equal test "/w==" &(encode &[255b]) "encode max byte value")
+    (assert-equal test
+      "AQIDBAUGCA=="
+      &(encode &[1b 2b 3b 4b 5b 6b 8b])
+      "encode multi-chunk with remainder")
+
+    ; decoding tests (happy path)
+    (assert-equal test
+      &(Result.Success [2b 3b 4b])
+      &(decode "AgME")
+      "test that decoding data works")
+    (assert-equal test
+      &(Result.Success @"Hello")
+      &(decode-str "SGVsbG8=")
+      "test that decoding strings works")
+    (assert-equal test
+      &(Result.Success @"höy")
+      &(decode-str "aMO2eQ==")
+      "test that decoding UTF8 strings works")
+    (assert-equal test
+      &(Result.Success @"P")
       &(decode-str "UA==")
       "test that index 20 (U) decodes correctly")
+    (assert-equal test &(Result.Success []) &(decode "") "decode empty input")
     (assert-equal test
-      &[2b 3b 4b]
+      &(Result.Success [0b])
+      &(decode "AA==")
+      "decode single zero byte")
+    (assert-equal test
+      &(Result.Success [0b 0b])
+      &(decode "AAA=")
+      "decode two zero bytes")
+    (assert-equal test
+      &(Result.Success [0b 0b 0b])
+      &(decode "AAAA")
+      "decode three zero bytes (no padding)")
+    (assert-equal test
+      &(Result.Success [255b])
+      &(decode "/w==")
+      "decode max byte value")
+
+    ; decode validation: invalid length
+    (assert-equal test
+      &(Result.Error @"input length must be a multiple of 4")
+      &(decode "A")
+      "reject length 1")
+    (assert-equal test
+      &(Result.Error @"input length must be a multiple of 4")
+      &(decode "AB")
+      "reject length 2")
+    (assert-equal test
+      &(Result.Error @"input length must be a multiple of 4")
+      &(decode "ABC")
+      "reject length 3")
+    (assert-equal test
+      &(Result.Error @"input length must be a multiple of 4")
+      &(decode "ABCDE")
+      "reject length 5")
+
+    ; decode validation: invalid characters
+    (assert-equal test
+      &(Result.Error @"invalid character in input")
+      &(decode "!!!!")
+      "reject invalid characters")
+    (assert-equal test
+      &(Result.Error @"invalid character in input")
+      &(decode "AB C")
+      "reject whitespace in input")
+
+    ; decode validation: bad padding
+    (assert-equal test
+      &(Result.Error @"padding in non-terminal position")
+      &(decode "=AAA")
+      "reject padding at start")
+    (assert-equal test
+      &(Result.Error @"padding in non-terminal position")
+      &(decode "A=AA")
+      "reject padding in second position")
+    (assert-equal test
+      &(Result.Error @"non-padding byte after padding")
+      &(decode "AB=C")
+      "reject non-padding after padding")
+    (assert-equal test
+      &(Result.Error @"padding in non-terminal position")
+      &(decode "ABCD====")
+      "reject too much padding in multi-chunk")
+
+    ; roundtrip tests
+    (assert-equal test
+      &(Result.Success [2b 3b 4b])
       &(decode &(encode &[2b 3b 4b]))
       "roundtrip: short binary data")
     (assert-equal test
-      "Hello!"
+      &(Result.Success @"Hello!")
       &(decode-str &(encode-str "Hello!"))
       "roundtrip: ASCII string")
     (assert-equal test
-      "höy"
+      &(Result.Success @"höy")
       &(decode-str &(encode-str "höy"))
-      "roundtrip: UTF8 string")))
+      "roundtrip: UTF8 string")
+    (assert-equal test
+      &(Result.Success [])
+      &(decode &(encode &[]))
+      "roundtrip: empty input")
+    (assert-equal test
+      &(Result.Success [42b])
+      &(decode &(encode &[42b]))
+      "roundtrip: single byte")
+    (assert-equal test
+      &(Result.Success [42b 43b])
+      &(decode &(encode &[42b 43b]))
+      "roundtrip: two bytes")
+    (assert-equal test
+      &(Result.Success [1b 2b 3b 4b 5b 6b 7b 8b 9b])
+      &(decode &(encode &[1b 2b 3b 4b 5b 6b 7b 8b 9b]))
+      "roundtrip: multi-chunk")))
