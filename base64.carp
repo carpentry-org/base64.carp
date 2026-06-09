@@ -26,14 +26,14 @@
                  seen-pad false]
           (while-do (and (< i len) (Maybe.nothing? &error))
             (let [b (Array.unsafe-nth bytes i)]
-              (if (= @b @padding)
-                (if (< i (- len 2))
+              (cond
+                (and (= @b @padding) (< i (- len 2)))
                   (set! error (Maybe.Just @"padding in non-terminal position"))
-                  (set! seen-pad true))
-                (if seen-pad
+                (= @b @padding) (set! seen-pad true)
+                seen-pad
                   (set! error (Maybe.Just @"non-padding byte after padding"))
-                  (when (Maybe.nothing? &(Array.index-of charset b))
-                    (set! error (Maybe.Just @"invalid character in input"))))))
+                (when (Maybe.nothing? &(Array.index-of charset b))
+                  (set! error (Maybe.Just @"invalid character in input")))))
             (set! i (inc i)))
           (match error
             (Maybe.Just e) (Result.Error e)
