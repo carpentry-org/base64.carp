@@ -4,7 +4,6 @@
 
 (defn main []
   (with-test test
-    ; encoding tests
     (assert-equal test
       "AgME"
       &(encode &[2b 3b 4b])
@@ -34,7 +33,6 @@
       &(encode &[1b 2b 3b 4b 5b 6b 8b])
       "encode multi-chunk with remainder")
 
-    ; decoding tests (happy path)
     (assert-equal test
       &(Result.Success [2b 3b 4b])
       &(decode "AgME")
@@ -69,7 +67,6 @@
       &(decode "/w==")
       "decode max byte value")
 
-    ; decode validation: invalid length
     (assert-equal test
       &(Result.Error @"input length must be a multiple of 4")
       &(decode "A")
@@ -87,7 +84,6 @@
       &(decode "ABCDE")
       "reject length 5")
 
-    ; decode validation: invalid characters
     (assert-equal test
       &(Result.Error @"invalid character in input")
       &(decode "!!!!")
@@ -97,7 +93,6 @@
       &(decode "AB C")
       "reject whitespace in input")
 
-    ; decode validation: bad padding
     (assert-equal test
       &(Result.Error @"padding in non-terminal position")
       &(decode "=AAA")
@@ -115,7 +110,6 @@
       &(decode "ABCD====")
       "reject too much padding in multi-chunk")
 
-    ; roundtrip tests
     (assert-equal test
       &(Result.Success [2b 3b 4b])
       &(decode &(encode &[2b 3b 4b]))
