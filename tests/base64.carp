@@ -137,4 +137,116 @@
     (assert-equal test
       &(Result.Success [1b 2b 3b 4b 5b 6b 7b 8b 9b])
       &(decode &(encode &[1b 2b 3b 4b 5b 6b 7b 8b 9b]))
-      "roundtrip: multi-chunk")))
+      "roundtrip: multi-chunk")
+
+    (assert-equal test
+      "-A=="
+      &(encode-url &[248b])
+      "url-safe encode maps + to - (standard: +A==)")
+    (assert-equal test
+      "_w=="
+      &(encode-url &[255b])
+      "url-safe encode maps / to _ (standard: /w==)")
+    (assert-equal test
+      "__8="
+      &(encode-url &[255b 255b])
+      "url-safe encode of two max bytes (standard: //8=)")
+    (assert-equal test
+      "-_AA"
+      &(encode-url &[251b 240b 0b])
+      "url-safe encode uses both - and _ (standard: +/AA)")
+    (assert-equal test "" &(encode-url &[]) "url-safe encode empty input")
+    (assert-equal test
+      "YWE_"
+      &(encode-url-str "aa?")
+      "url-safe encode-str maps / to _ (standard: YWE/)")
+    (assert-equal test
+      "YWE-"
+      &(encode-url-str "aa>")
+      "url-safe encode-str maps + to - (standard: YWE+)")
+
+    (assert-equal test
+      &(Result.Success [248b])
+      &(decode-url "-A==")
+      "url-safe decode padded, remainder 1")
+    (assert-equal test
+      &(Result.Success [255b 255b])
+      &(decode-url "__8=")
+      "url-safe decode padded, remainder 2")
+    (assert-equal test
+      &(Result.Success [251b 240b 0b])
+      &(decode-url "-_AA")
+      "url-safe decode, remainder 0 (no padding)")
+    (assert-equal test
+      &(Result.Success [])
+      &(decode-url "")
+      "url-safe decode empty input")
+
+    (assert-equal test
+      &(Result.Success [248b])
+      &(decode-url "-A")
+      "url-safe decode unpadded, remainder 1")
+    (assert-equal test
+      &(Result.Success [255b 255b])
+      &(decode-url "__8")
+      "url-safe decode unpadded, remainder 2")
+    (assert-equal test
+      &(decode-url "-A==")
+      &(decode-url "-A")
+      "url-safe padded and unpadded decode agree (remainder 1)")
+    (assert-equal test
+      &(decode-url "__8=")
+      &(decode-url "__8")
+      "url-safe padded and unpadded decode agree (remainder 2)")
+
+    (assert-equal test
+      &(Result.Success @"aa?")
+      &(decode-url-str "YWE_")
+      "url-safe decode-str works")
+
+    (assert-equal test
+      &(decode "+A==")
+      &(decode-url "-A==")
+      "url-safe and standard decode agree (+ vs -)")
+    (assert-equal test
+      &(decode "//8=")
+      &(decode-url "__8=")
+      "url-safe and standard decode agree (/ vs _)")
+    (assert-equal test
+      &(decode "+/AA")
+      &(decode-url "-_AA")
+      "url-safe and standard decode agree (+/ vs -_)")
+
+    (assert-equal test
+      &(Result.Error @"invalid character in input")
+      &(decode-url "+A==")
+      "url-safe decode rejects standard +")
+    (assert-equal test
+      &(Result.Error @"invalid character in input")
+      &(decode-url "/w==")
+      "url-safe decode rejects standard /")
+
+    (assert-equal test
+      &(Result.Success [251b 240b 0b])
+      &(decode-url &(encode-url &[251b 240b 0b]))
+      "url-safe roundtrip: remainder 0")
+    (assert-equal test
+      &(Result.Success [248b])
+      &(decode-url &(encode-url &[248b]))
+      "url-safe roundtrip: remainder 1")
+    (assert-equal test
+      &(Result.Success [255b 255b])
+      &(decode-url &(encode-url &[255b 255b]))
+      "url-safe roundtrip: remainder 2")
+    (assert-equal test
+      &(Result.Success [])
+      &(decode-url &(encode-url &[]))
+      "url-safe roundtrip: empty")
+    (assert-equal test
+      &(Result.Success @"aa?")
+      &(decode-url-str &(encode-url-str "aa?"))
+      "url-safe roundtrip: string")
+    (assert-equal test
+      &(Result.Success [1b 2b 3b 4b 5b 6b 7b 8b 9b])
+      &(decode-url &(encode-url &[1b 2b 3b 4b 5b 6b 7b 8b 9b]))
+      "url-safe roundtrip: multi-chunk")))
