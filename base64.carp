@@ -7,6 +7,11 @@
   (def mime-padding 61b)
   ; => \= as byte
 
+  (doc url-charset
+    "The URL- and filename-safe Base64 character set (RFC 4648 section 5).")
+  (def url-charset (Array.aset (Array.aset @&mime-charset 62 45b) 63 95b))
+  ; derived from mime-charset: index 62 + -> - (45b), index 63 / -> _ (95b)
+
   (private get-from-charset)
   (hidden get-from-charset)
   (defn get-from-charset [charset byte]
@@ -159,4 +164,38 @@
   (defn encode [s] (encode-using &mime-charset mime-padding s))
 
   (doc encode-str "Encodes a string into base64 using mime-charset.")
-  (defn encode-str [s] (encode-using &mime-charset mime-padding &(to-bytes s))))
+  (defn encode-str [s] (encode-using &mime-charset mime-padding &(to-bytes s)))
+
+  (doc encode-url
+    "Encodes a datum into URL- and filename-safe base64 (RFC 4648 section 5).")
+  (defn encode-url [s] (encode-using &url-charset mime-padding s))
+
+  (doc encode-url-str
+    "Encodes a string into URL- and filename-safe base64 (RFC 4648 section 5).")
+  (defn encode-url-str [s]
+    (encode-using &url-charset mime-padding &(to-bytes s)))
+
+  (private pad-to-multiple)
+  (hidden pad-to-multiple)
+  (sig pad-to-multiple (λ [&String] String))
+  (defn pad-to-multiple [s]
+    (case (mod (String.length s) 4)
+          2
+          (String.append s "==")
+          3
+          (String.append s "=")
+          @s))
+
+  (doc decode-url
+    "Decodes a URL- and filename-safe base64 datum (RFC 4648 section 5).
+     Accepts input with or without `=` padding.")
+  (defn decode-url [s]
+    (decode-using &url-charset &mime-padding &(pad-to-multiple s)))
+
+  (doc decode-url-str
+    "Decodes a URL- and filename-safe base64 string (RFC 4648 section 5).
+     Accepts input with or without `=` padding.")
+  (defn decode-url-str [s]
+    (match (decode-url s)
+      (Result.Success bytes) (Result.Success (from-bytes &bytes))
+      (Result.Error e) (Result.Error e))))
