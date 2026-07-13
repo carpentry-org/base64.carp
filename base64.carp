@@ -12,15 +12,36 @@
   (def url-charset (Array.aset (Array.aset @&mime-charset 62 45b) 63 95b))
   ; derived from mime-charset: index 62 + -> - (45b), index 63 / -> _ (95b)
 
-  (private get-from-charset)
-  (hidden get-from-charset)
-  (defn get-from-charset [charset byte]
-    (Byte.from-int (Maybe.from (Array.index-of charset byte) 0)))
+  ; reverse-lookup tables map an alphabet byte back to its 6-bit value in O(1),
+  ; with 255 marking a byte that is not part of the alphabet.
+  (private make-revtable)
+  (hidden make-revtable)
+  (sig make-revtable (λ [&(Array Byte)] (Array Byte)))
+  (defn make-revtable [charset]
+    (let-do [table (Array.replicate 256 &255b)]
+      (for [i 0 (Array.length charset)]
+        (Array.aset! &table
+                     (to-int @(Array.unsafe-nth charset i))
+                     (Byte.from-int i)))
+      table))
+
+  (private mime-revtable)
+  (hidden mime-revtable)
+  (def mime-revtable (make-revtable &mime-charset))
+
+  (private url-revtable)
+  (hidden url-revtable)
+  (def url-revtable (make-revtable &url-charset))
+
+  (private rev)
+  (hidden rev)
+  (sig rev (λ [&(Array Byte) &Byte] Byte))
+  (defn rev [revtable byte] @(Array.unsafe-nth revtable (to-int @byte)))
 
   (private validate)
   (hidden validate)
   (sig validate (λ [&(Array Byte) &Byte &(Array Byte)] (Result Bool String)))
-  (defn validate [charset padding bytes]
+  (defn validate [revtable padding bytes]
     (let [len (Array.length bytes)]
       (cond
         (= len 0) (Result.Success true)
@@ -37,35 +58,32 @@
                 (= @b @padding) (set! seen-pad true)
                 seen-pad
                   (set! error (Maybe.Just @"non-padding byte after padding"))
-                (when (Maybe.nothing? &(Array.index-of charset b))
+                (when (= (rev revtable b) 255b)
                   (set! error (Maybe.Just @"invalid character in input")))))
             (set! i (inc i)))
           (match error
             (Maybe.Just e) (Result.Error e)
             (Maybe.Nothing) (Result.Success true))))))
 
-  (doc decode-using
-    "Decodes a base64-encoded datum using a user-supplied character set.
-     Returns a Result with the decoded bytes or an error string.")
-  (sig decode-using
+  (private decode-with-table)
+  (hidden decode-with-table)
+  (sig decode-with-table
        (λ [&(Array Byte) &Byte &String] (Result (Array Byte) String)))
-  (defn decode-using [charset padding s]
+  (defn decode-with-table [revtable padding s]
     (let [bytes (to-bytes s)]
-      (match (validate charset padding &bytes)
+      (match (validate revtable padding &bytes)
         (Result.Error e) (Result.Error e)
         (Result.Success _)
           (let-do [decoded []
                    len (Array.length &bytes)
                    idx 0]
             (while (< idx len)
-              (let-do [b0 (get-from-charset charset
-                                            (Array.unsafe-nth &bytes idx))
-                       b1 (get-from-charset charset
-                                            (Array.unsafe-nth &bytes (+ idx 1)))
+              (let-do [b0 (rev revtable (Array.unsafe-nth &bytes idx))
+                       b1 (rev revtable (Array.unsafe-nth &bytes (+ idx 1)))
                        third (Array.unsafe-nth &bytes (+ idx 2))
-                       b2 (get-from-charset charset third)
+                       b2 (rev revtable third)
                        fourth (Array.unsafe-nth &bytes (+ idx 3))
-                       b3 (get-from-charset charset fourth)]
+                       b3 (rev revtable fourth)]
                 (set! decoded
                       (Array.push-back decoded
                                        (bit-or (bit-shift-left (bit-and b0 63b)
@@ -86,8 +104,16 @@
                 (set! idx (+ idx 4))))
             (Result.Success decoded)))))
 
+  (doc decode-using
+    "Decodes a base64-encoded datum using a user-supplied character set.
+     Returns a Result with the decoded bytes or an error string.")
+  (sig decode-using
+       (λ [&(Array Byte) &Byte &String] (Result (Array Byte) String)))
+  (defn decode-using [charset padding s]
+    (decode-with-table &(make-revtable charset) padding s))
+
   (doc decode "Decodes a base64-encoded datum using mime-charset.")
-  (defn decode [x] (decode-using &mime-charset &mime-padding x))
+  (defn decode [x] (decode-with-table &mime-revtable &mime-padding x))
 
   (doc decode-str "Decodes a base64-encoded string using mime-charset.")
   (defn decode-str [s]
@@ -190,7 +216,7 @@
     "Decodes a URL- and filename-safe base64 datum (RFC 4648 section 5).
      Accepts input with or without `=` padding.")
   (defn decode-url [s]
-    (decode-using &url-charset &mime-padding &(pad-to-multiple s)))
+    (decode-with-table &url-revtable &mime-padding &(pad-to-multiple s)))
 
   (doc decode-url-str
     "Decodes a URL- and filename-safe base64 string (RFC 4648 section 5).
