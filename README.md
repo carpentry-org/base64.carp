@@ -21,11 +21,11 @@ Currently this library exposes ten functions: `encode`, `encode-str`,
 `encode-using`, `decode-using`, `decode-str`, and `decode`, plus their URL- and
 filename-safe counterparts `encode-url`, `encode-url-str`, `decode-url`, and
 `decode-url-str`. Both `encode-str` and `decode-str` take a reference to a string
-and return a `Result`, and they implement encoding and decoding using the MIME
-character set. `encode` and `decode` make no such assumptions and deal with binary
-data (or rather, arrays of byte-sized integers). `encode-using` and `decode-using`
-are their more general sibling functions, as they take in an additional
-user-supplied character set.
+and implement encoding and decoding using the MIME character set; `encode-str`
+returns the encoded `String`, `decode-str` a `Result`. `encode` and `decode` make
+no such assumptions and deal with binary data (or rather, arrays of byte-sized
+integers). `encode-using` and `decode-using` are their more general sibling
+functions, as they take in an additional user-supplied character set.
 
 The `*-url` functions use the URL- and filename-safe alphabet of RFC 4648
 section 5, where `+` and `/` become `-` and `_`. Because URL-safe Base64 is
